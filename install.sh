@@ -69,6 +69,7 @@ else
     -p "${PORT}:8080" \
     -v agentdock-data:/data \
     -e TZ="$(cat /etc/timezone 2>/dev/null || echo 'UTC')" \
+    -e NTFY_ENABLED=0 \
     "${IMAGE}"
 fi
 
@@ -83,5 +84,9 @@ echo "📋 Commands:"
 echo "   Stop:    docker stop ${CONTAINER_NAME}"
 echo "   Logs:    docker logs -f ${CONTAINER_NAME}"
 echo "   Remove:  docker rm -f ${CONTAINER_NAME}"
+echo ""
+echo "🔔 To enable ntfy notifications:"
+echo "   Set NTFY_URL, NTFY_TOPIC, NTFY_TOKEN env vars"
+echo "   Then restart: docker restart ${CONTAINER_NAME}"
 echo ""
 echo "🐑 Happy herding!"

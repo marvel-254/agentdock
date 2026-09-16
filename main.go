@@ -43,19 +43,19 @@ var (
 
 // Known agent process names and their display names
 var agentPatterns = map[string]string{
-	"hermes":      "Hermes",
-	"opencode":    "OpenCode",
-	"kilo":        "Kilo",
-	"claude":      "Claude Code",
-	"goose":       "Goose",
-	"qwen":        "Qwen Code",
-	"codex":       "Codex",
-	"cursor":      "Cursor Agent",
-	"cline":       "Cline",
-	"kiro":        "Kiro",
-	"droid":       "Droid",
-	"amp":         "Amp",
-	"grok":        "Grok",
+	"hermes":       "Hermes",
+	"opencode":     "OpenCode",
+	"kilo":         "Kilo",
+	"claude":       "Claude Code",
+	"goose":        "Goose",
+	"qwen":         "Qwen Code",
+	"codex":        "Codex",
+	"cursor":       "Cursor Agent",
+	"cline":        "Cline",
+	"kiro":         "Kiro",
+	"droid":        "Droid",
+	"amp":          "Amp",
+	"grok":         "Grok",
 	"hermes-agent": "Hermes Agent",
 }
 
@@ -167,10 +167,22 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
+	dbMu.RLock()
+	defer dbMu.RUnlock()
+
+	var agentCount, eventCount int
+	db.QueryRow("SELECT COUNT(*) FROM agents WHERE last_seen > datetime('now', '-5 minutes')").Scan(&agentCount)
+	db.QueryRow("SELECT COUNT(*) FROM events WHERE created_at > datetime('now', '-24 hours')").Scan(&eventCount)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ok",
-		"time":   time.Now().Format(time.RFC3339),
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":        "ok",
+		"time":          time.Now().Format(time.RFC3339),
+		"ntfy_enabled":  ntfy.Enabled,
+		"agents_24h":    agentCount,
+		"events_24h":    eventCount,
+		"ntfy_url":      ntfy.BaseURL,
+		"ntfy_topic":    ntfy.Topic,
 	})
 }
 
@@ -179,20 +191,54 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, dashboardHTML)
 }
 
+func handlePublishNtfy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "POST only", 405)
+		return
+	}
+
+	var req struct {
+		Topic   string `json:"topic"`
+		Message string `json:"message"`
+		Title   string `json:"title"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if req.Topic == "" {
+		req.Topic = ntfy.Topic
+	}
+	if req.Title == "" {
+		req.Title = "AgentDock"
+	}
+
+	priority := getEnv("NTFY_PRIORITY_DONE", "default")
+	tags := "robot,agentdock"
+
+	sendNtfy(req.Title, req.Message, priority, tags)
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
+}
+
 func main() {
+	initNtfy()
+
 	if err := initDB(); err != nil {
 		logger.Fatalf("Database init failed: %v", err)
 	}
 	defer db.Close()
 
-	// Start process scanner in background
 	go scanLoop()
+	go heartbeat()
 
-	// Setup routes
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/api/agents", handleAgents)
 	http.HandleFunc("/api/events", handleEvents)
 	http.HandleFunc("/api/health", handleHealth)
+	http.HandleFunc("/api/ntfy/publish", handlePublishNtfy)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -200,6 +246,9 @@ func main() {
 	}
 
 	logger.Printf("AgentDock starting on :%s", port)
+	logger.Printf("ntfy: enabled=%v url=%s topic=%s", ntfy.Enabled, ntfy.BaseURL, ntfy.Topic)
+	logger.Printf("ntfy config: URL=%s, Topic=%s, Token=%v", ntfy.BaseURL, ntfy.Topic, ntfy.Token != "")
+
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		logger.Fatalf("Server failed: %v", err)
 	}
