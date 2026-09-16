@@ -2,22 +2,17 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 )
 
-// ntfyConfig holds notification settings
 type ntfyConfig struct {
-	Enabled   bool
-	BaseURL   string
-	Topic     string
-	Token     string
+	Enabled         bool
+	BaseURL         string
+	Topic           string
+	Token           string
 	PriorityDone    string
 	PriorityBlocked string
 	PriorityWorking string
@@ -44,7 +39,6 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// sendNtfy sends a push notification via ntfy
 func sendNtfy(title, message, priority, tags string) {
 	if !ntfy.Enabled || ntfy.BaseURL == "" || ntfy.Topic == "" {
 		return
@@ -84,36 +78,6 @@ func sendNtfy(title, message, priority, tags string) {
 	}
 }
 
-// recordEvent inserts an event into the database
-func recordEvent(eventType, message, agentName string) error {
-	dbMu.Lock()
-	defer dbMu.Unlock()
-
-	_, err := db.Exec(
-		"INSERT INTO events (type, message, agent_name, created_at) VALUES (?, ?, ?, ?)",
-		eventType, message, agentName, time.Now(),
-	)
-	return err
-}
-
-// detectState determines agent status based on CPU and process activity
-func detectState(cpu float64, agentID string) string {
-	if cpu > 5.0 {
-		return "working"
-	}
-	if cpu > 0.5 {
-		return "active"
-	}
-	// Check if process has been idle
-	var lastSeen time.Time
-	err := db.QueryRow("SELECT last_seen FROM agents WHERE id = ?", agentID).Scan(&lastSeen)
-	if err == nil && time.Since(lastSeen) > 30*time.Second {
-		return "idle"
-	}
-	return "waiting"
-}
-
-// trackAgentStateChange sends notifications on meaningful state changes
 func trackAgentStateChange(agentID, name, oldStatus, newStatus string) {
 	if oldStatus == newStatus {
 		return
@@ -141,10 +105,9 @@ func trackAgentStateChange(agentID, name, oldStatus, newStatus string) {
 	}
 
 	sendNtfy("AgentDock", msg, priority, tags)
-	recordEvent("state_change", fmt.Sprintf("%s: %s → %s", name, oldStatus, newStatus), name)
+	store.addEvent("state_change", fmt.Sprintf("%s: %s → %s", name, oldStatus, newStatus), name)
 }
 
-// heartbeat sends periodic summary to ntfy (optional)
 func heartbeat() {
 	if !ntfy.Enabled {
 		return
@@ -154,15 +117,11 @@ func heartbeat() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		dbMu.RLock()
-		var count int
-		err := db.QueryRow("SELECT COUNT(*) FROM agents WHERE status = 'working'").Scan(&count)
-		dbMu.RUnlock()
-
-		if err == nil && count > 0 {
+		agents := store.getAgents()
+		if len(agents) > 0 {
 			sendNtfy(
 				"AgentDock Summary",
-				fmt.Sprintf("%d agents currently working", count),
+				fmt.Sprintf("%d agents currently working", len(agents)),
 				"low",
 				"chart,agent",
 			)

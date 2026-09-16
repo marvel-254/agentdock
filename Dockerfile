@@ -2,9 +2,7 @@
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-COPY go.mod ./
-RUN go mod download
-COPY *.go ./
+COPY go.mod *.go ./
 RUN go build -o agentdock .
 
 # Runtime stage

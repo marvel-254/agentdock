@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-// scanLoop continuously scans /proc for AI agent processes
 func scanLoop() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -22,7 +21,6 @@ func scanLoop() {
 	}
 }
 
-// scanProcesses reads /proc and detects AI agent processes
 func scanProcesses() error {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
@@ -41,7 +39,6 @@ func scanProcesses() error {
 			continue
 		}
 
-		// Read process name
 		commPath := filepath.Join("/proc", entry.Name(), "comm")
 		comm, err := os.ReadFile(commPath)
 		if err != nil {
@@ -50,9 +47,8 @@ func scanProcesses() error {
 
 		procName := strings.TrimSpace(string(comm))
 		displayName, isAgent := agentPatterns[procName]
-		
+
 		if !isAgent {
-			// Check cmdline for agent patterns
 			cmdlinePath := filepath.Join("/proc", entry.Name(), "cmdline")
 			cmdline, err := os.ReadFile(cmdlinePath)
 			if err != nil {
@@ -71,7 +67,6 @@ func scanProcesses() error {
 			continue
 		}
 
-		// Read memory from /proc/[pid]/status
 		var ramKB int64
 		statusPath := filepath.Join("/proc", entry.Name(), "status")
 		statusFile, err := os.Open(statusPath)
@@ -90,64 +85,43 @@ func scanProcesses() error {
 			}
 		}
 
-		// Calculate CPU usage (simplified)
 		cpuUsage := getCPUUsage(entry.Name())
-
 		agentID := fmt.Sprintf("%s-%d", procName, pid)
-		
-		// Detect state
 		newState := detectState(cpuUsage, agentID)
 
-		// Get old state and update
-		dbMu.Lock()
-		var oldState string
-		err = db.QueryRow("SELECT status FROM agents WHERE id = ?", agentID).Scan(&oldState)
-		
-		if err == sql.ErrNoRows {
-			// New agent
-			recordEvent("agent_started", fmt.Sprintf("%s started (PID %d)", displayName, pid), displayName)
-			sendNtfy("AgentDock", fmt.Sprintf("🟢 %s started", displayName), "low", "rocket,agent")
-		} else if oldState != newState {
-			trackAgentStateChange(agentID, displayName, oldState, newState)
+		agent := Agent{
+			ID:        agentID,
+			Name:      displayName,
+			PID:       pid,
+			CPU:       cpuUsage,
+			RAM:       ramKB * 1024,
+			Status:    newState,
+			StartedAt: now,
+			LastSeen:  now,
 		}
 
-		// Upsert agent
-		_, err = db.Exec(`
-			INSERT INTO agents (id, name, pid, cpu, ram, status, started_at, last_seen)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT(id) DO UPDATE SET
-				cpu = excluded.cpu,
-				ram = excluded.ram,
-				status = excluded.status,
-				last_seen = excluded.last_seen
-		`, agentID, displayName, pid, cpuUsage, ramKB*1024, newState, now, now)
-		dbMu.Unlock()
-
-		if err != nil {
-			logger.Printf("Failed to upsert agent %s: %v", agentID, err)
+		changed, oldState := store.upsertAgent(agent)
+		if changed {
+			if oldState == "" {
+				store.addEvent("agent_started", fmt.Sprintf("%s started (PID %d)", displayName, pid), displayName)
+				sendNtfy("AgentDock", fmt.Sprintf("🟢 %s started", displayName), "low", "rocket,agent")
+			} else {
+				trackAgentStateChange(agentID, displayName, oldState, newState)
+			}
 		}
 	}
 
-	// Remove stale agents
-	dbMu.Lock()
+	// Remove stale
 	threshold := now.Add(-30 * time.Second)
-	rows, _ := db.Query("SELECT id, name FROM agents WHERE last_seen < ?", threshold)
-	if rows != nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id, name string
-			rows.Scan(&id, &name)
-			recordEvent("agent_stopped", fmt.Sprintf("%s stopped", name), name)
-			sendNtfy("AgentDock", fmt.Sprintf("🔴 %s stopped", name), "high", "stop_sign,agent")
-		}
+	removed := store.removeStale(threshold)
+	for _, name := range removed {
+		store.addEvent("agent_stopped", fmt.Sprintf("%s stopped", name), name)
+		sendNtfy("AgentDock", fmt.Sprintf("🔴 %s stopped", name), "high", "stop_sign,agent")
 	}
-	_, _ = db.Exec("DELETE FROM agents WHERE last_seen < ?", threshold)
-	dbMu.Unlock()
 
 	return nil
 }
 
-// getCPUUsage calculates a simplified CPU usage percentage from /proc/[pid]/stat
 func getCPUUsage(pid string) float64 {
 	statPath := filepath.Join("/proc", pid, "stat")
 	data, err := os.ReadFile(statPath)
@@ -160,12 +134,9 @@ func getCPUUsage(pid string) float64 {
 		return 0
 	}
 
-	// utime + stime (fields 14 and 15)
 	utime, _ := strconv.ParseUint(fields[13], 10, 64)
 	stime, _ := strconv.ParseUint(fields[14], 10, 64)
 	totalTime := utime + stime
 
-	// Convert to percentage (rough approximation)
-	// This is simplified; for accurate CPU you'd need to track over time
 	return float64(totalTime%100) / 100.0 * 100
 }
