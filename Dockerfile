@@ -3,10 +3,9 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 COPY go.mod ./
-COPY *.go ./
-RUN go mod tidy
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o agentdock .
+COPY *.go ./
+RUN go build -o agentdock .
 
 # Runtime stage
 FROM alpine:3.19
