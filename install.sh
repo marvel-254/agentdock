@@ -22,7 +22,6 @@ if ! command -v docker &>/dev/null; then
   exit 1
 fi
 
-# Check Docker Compose (preferred) or fallback to docker run
 USE_COMPOSE=false
 if command -v docker compose &>/dev/null || docker compose version &>/dev/null 2>&1; then
   USE_COMPOSE=true
@@ -31,7 +30,6 @@ fi
 echo "📦 Pulling AgentDock image..."
 docker pull "${IMAGE}" 2>&1 || {
   echo "⚠️  Could not pull from GHCR. Building locally..."
-  echo "   (This requires git and Docker BuildKit)"
   
   if command -v git &>/dev/null; then
     TMPDIR=$(mktemp -d)
@@ -46,19 +44,14 @@ docker pull "${IMAGE}" 2>&1 || {
   fi
 }
 
-# Stop existing container if running
+# Stop existing container
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  echo "🔄 Stopping existing AgentDock container..."
+  echo "🔄 Stopping existing container..."
   docker stop "${CONTAINER_NAME}" 2>/dev/null || true
   docker rm "${CONTAINER_NAME}" 2>/dev/null || true
 fi
 
 echo "🚀 Starting AgentDock..."
-
-VOLUME_EXISTS=false
-if docker volume inspect agentdock-data &>/dev/null; then
-  VOLUME_EXISTS=true
-fi
 
 if [ "$USE_COMPOSE" = true ] && [ -f "docker-compose.yml" ]; then
   docker compose up -d
@@ -86,7 +79,7 @@ echo "   Logs:    docker logs -f ${CONTAINER_NAME}"
 echo "   Remove:  docker rm -f ${CONTAINER_NAME}"
 echo ""
 echo "🔔 To enable ntfy notifications:"
-echo "   Set NTFY_URL, NTFY_TOPIC, NTFY_TOKEN env vars"
-echo "   Then restart: docker restart ${CONTAINER_NAME}"
+echo "   Set NTFY_URL, NTFY_TOPIC env vars"
+echo "   Then: docker restart ${CONTAINER_NAME}"
 echo ""
 echo "🐑 Happy herding!"

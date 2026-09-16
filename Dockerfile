@@ -2,10 +2,9 @@
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-
+COPY go.mod ./
 COPY *.go ./
+RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -o agentdock .
 
 # Runtime stage
@@ -16,7 +15,6 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /app/agentdock .
 
-# Create data directory for SQLite
 RUN mkdir -p /data
 
 EXPOSE 8080
