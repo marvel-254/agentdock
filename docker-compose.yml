@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  agentdock:
+    image: ghcr.io/marvel-254/agentdock:latest
+    container_name: agentdock
+    restart: unless-stopped
+    ports:
+      - "${AGENTDOCK_PORT:-8080}:8080"
+    volumes:
+      - agentdock-data:/data
+    environment:
+      - TZ=${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  agentdock-data:
