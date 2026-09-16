@@ -22,7 +22,12 @@ func scanLoop() {
 }
 
 func scanProcesses() error {
-	entries, err := os.ReadDir("/proc")
+	procDir := "/proc"
+	if os.Getenv("HOST_PROC") != "" {
+		procDir = os.Getenv("HOST_PROC")
+	}
+
+	entries, err := os.ReadDir(procDir)
 	if err != nil {
 		return fmt.Errorf("failed to read /proc: %w", err)
 	}
@@ -39,7 +44,7 @@ func scanProcesses() error {
 			continue
 		}
 
-		commPath := filepath.Join("/proc", entry.Name(), "comm")
+		commPath := filepath.Join(procDir, entry.Name(), "comm")
 		comm, err := os.ReadFile(commPath)
 		if err != nil {
 			continue
@@ -49,7 +54,7 @@ func scanProcesses() error {
 		displayName, isAgent := agentPatterns[procName]
 
 		if !isAgent {
-			cmdlinePath := filepath.Join("/proc", entry.Name(), "cmdline")
+			cmdlinePath := filepath.Join(procDir, entry.Name(), "cmdline")
 			cmdline, err := os.ReadFile(cmdlinePath)
 			if err != nil {
 				continue
@@ -68,7 +73,7 @@ func scanProcesses() error {
 		}
 
 		var ramKB int64
-		statusPath := filepath.Join("/proc", entry.Name(), "status")
+		statusPath := filepath.Join(procDir, entry.Name(), "status")
 		statusFile, err := os.Open(statusPath)
 		if err == nil {
 			defer statusFile.Close()
@@ -123,7 +128,11 @@ func scanProcesses() error {
 }
 
 func getCPUUsage(pid string) float64 {
-	statPath := filepath.Join("/proc", pid, "stat")
+	procDir := "/proc"
+	if os.Getenv("HOST_PROC") != "" {
+		procDir = os.Getenv("HOST_PROC")
+	}
+	statPath := filepath.Join(procDir, pid, "stat")
 	data, err := os.ReadFile(statPath)
 	if err != nil {
 		return 0

@@ -9,8 +9,10 @@ services:
       - "${AGENTDOCK_PORT:-8080}:8080"
     volumes:
       - agentdock-data:/data
+      - /proc:/host/proc:ro
     environment:
       - TZ=${TZ:-UTC}
+      - HOST_PROC=/host/proc
       - NTFY_ENABLED=${NTFY_ENABLED:-0}
       - NTFY_URL=${NTFY_URL:-https://ntfy.sh}
       - NTFY_TOPIC=${NTFY_TOPIC:-agentdock-alerts}

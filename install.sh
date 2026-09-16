@@ -15,7 +15,6 @@ echo "║  AgentDock — Lightweight AI Agent Monitor ║"
 echo "╚═══════════════════════════════════════════╝"
 echo ""
 
-# Check Docker
 if ! command -v docker &>/dev/null; then
   echo "❌ Docker is required. Install it first:"
   echo "   https://docs.docker.com/engine/install/"
@@ -44,9 +43,8 @@ docker pull "${IMAGE}" 2>&1 || {
   fi
 }
 
-# Stop existing container
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  echo "🔄 Stopping existing container..."
+  echo "🔴 Stopping existing container..."
   docker stop "${CONTAINER_NAME}" 2>/dev/null || true
   docker rm "${CONTAINER_NAME}" 2>/dev/null || true
 fi
@@ -61,6 +59,8 @@ else
     --restart unless-stopped \
     -p "${PORT}:8080" \
     -v agentdock-data:/data \
+    -v /proc:/host/proc:ro \
+    -e HOST_PROC=/host/proc \
     -e TZ="$(cat /etc/timezone 2>/dev/null || echo 'UTC')" \
     -e NTFY_ENABLED=0 \
     "${IMAGE}"
