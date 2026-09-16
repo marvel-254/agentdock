@@ -29,7 +29,7 @@ type Event struct {
 }
 
 var (
-	logger = log.New(os.Stdout, "[AgentDock] ", log.LstdFlags)
+	logger = log.New(os.Stdout, "[OrionOS] ", log.LstdFlags)
 )
 
 var agentPatterns = map[string]string{
@@ -119,11 +119,11 @@ func handlePublishNtfy(w http.ResponseWriter, r *http.Request) {
 		req.Topic = ntfy.Topic
 	}
 	if req.Title == "" {
-		req.Title = "AgentDock"
+		req.Title = "OrionOS"
 	}
 
 	priority := getEnv("NTFY_PRIORITY_DONE", "default")
-	tags := "robot,agentdock"
+	tags := "robot,orionos"
 
 	sendNtfy(req.Title, req.Message, priority, tags)
 	w.WriteHeader(200)
@@ -148,7 +148,7 @@ func main() {
 		port = "8080"
 	}
 
-	logger.Printf("AgentDock starting on :%s", port)
+	logger.Printf("OrionOS starting on :%s", port)
 	logger.Printf("ntfy: enabled=%v url=%s topic=%s", ntfy.Enabled, ntfy.BaseURL, ntfy.Topic)
 
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

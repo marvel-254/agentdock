@@ -21,7 +21,7 @@ func initStore() {
 	store = &Store{
 		agents:   make([]Agent, 0),
 		events:   make([]Event, 0),
-		filename: "/data/agentdock.json",
+		filename: "/data/orionos.json",
 	}
 	store.load()
 }

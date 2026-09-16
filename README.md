@@ -1,4 +1,4 @@
-# AgentDock 🐑
+# OrionOS 🐑
 
 Lightweight, self-hosted web dashboard for monitoring AI agents.
 
@@ -6,9 +6,9 @@ Lightweight, self-hosted web dashboard for monitoring AI agents.
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## What is AgentDock?
+## What is OrionOS?
 
-AgentDock is a Dockerized service that auto-detects running AI agents on your machine and displays them in a clean, real-time web dashboard. Think of it as a control plane for your AI coding agents.
+OrionOS is a Dockerized service that auto-detects running AI agents on your machine and displays them in a clean, real-time web dashboard. Think of it as a control plane for your AI coding agents.
 
 **Key features:**
 - 🔍 Auto-detects agents (Hermes, OpenCode, Kilo, Claude Code, Goose, etc.)
@@ -21,7 +21,7 @@ AgentDock is a Dockerized service that auto-detects running AI agents on your ma
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/marvel-254/agentdock/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/marvel-254/orionos/main/install.sh | sh
 ```
 
 Then open http://localhost:8080
@@ -30,15 +30,15 @@ Then open http://localhost:8080
 
 ```bash
 # Clone
-git clone https://github.com/marvel-254/agentdock.git
-cd agentdock
+git clone https://github.com/marvel-254/orionos.git
+cd orionos
 
 # Build and run with Docker Compose
 docker compose up -d
 
 # Or build and run manually
-docker build -t agentdock .
-docker run -d --name agentdock -p 8080:8080 -v agentdock-data:/data agentdock
+docker build -t orionos .
+docker run -d --name orionos -p 8080:8080 -v orionos-data:/data orionos
 ```
 
 ## Configuration
@@ -56,7 +56,7 @@ docker run -d --name agentdock -p 8080:8080 -v agentdock-data:/data agentdock
 |----------|---------|-------------|
 | `NTFY_ENABLED` | `0` | Enable notifications (1/true to enable) |
 | `NTFY_URL` | `https://ntfy.sh` | ntfy base URL |
-| `NTFY_TOPIC` | `agentdock-alerts` | ntfy topic |
+| `NTFY_TOPIC` | `orionos-alerts` | ntfy topic |
 | `NTFY_TOKEN` | (empty) | Bearer token for private topics |
 | `NTFY_PRIORITY_DONE` | `default` | Priority for completed agents |
 | `NTFY_PRIORITY_BLOCKED` | `high` | Priority for blocked agents |
@@ -83,17 +83,17 @@ docker compose up -d
 **Option 2: Docker run**
 
 ```bash
-docker stop agentdock
-docker rm agentdock
+docker stop orionos
+docker rm orionos
 docker run -d \
-  --name agentdock \
+  --name orionos \
   --restart unless-stopped \
   -p 8080:8080 \
-  -v agentdock-data:/data \
+  -v orionos-data:/data \
   -e NTFY_ENABLED=1 \
   -e NTFY_URL=https://ntfy.sh \
   -e NTFY_TOPIC=my-agent-alerts \
-  ghcr.io/marvel-254/agentdock:latest
+  ghcr.io/marvel-254/orionos:latest
 ```
 
 **Option 3: Self-hosted ntfy**
@@ -131,7 +131,7 @@ curl http://localhost:8080/api/events?limit=20 | jq
 # Send manual notification
 curl -X POST http://localhost:8080/api/ntfy/publish \
   -H "Content-Type: application/json" \
-  -d '{"title":"Test","message":"Hello from AgentDock","topic":"my-agent-alerts"}'
+  -d '{"title":"Test","message":"Hello from OrionOS","topic":"my-agent-alerts"}'
 ```
 
 ## Detected Agents
@@ -156,7 +156,7 @@ curl -X POST http://localhost:8080/api/ntfy/publish \
 
 ```
 ┌─────────────────────────────────────┐
-│  Docker Container (AgentDock)       │
+│  Docker Container (OrionOS)         │
 │                                     │
 │  ┌─────────┐  ┌──────────────────┐  │
 │  │ Go API  │  │ Process Scanner  │  │
@@ -188,7 +188,7 @@ go mod download
 go run .
 
 # Build Docker image
-docker build -t agentdock .
+docker build -t orionos .
 
 # Run with ntfy enabled locally
 NTFY_ENABLED=1 NTFY_URL=https://ntfy.sh NTFY_TOPIC=test go run .
@@ -198,12 +198,12 @@ NTFY_ENABLED=1 NTFY_URL=https://ntfy.sh NTFY_TOPIC=test go run .
 
 **"No agents detected"**
 - Ensure AI agents are running
-- Check `docker logs agentdock` for scan errors
+- Check `docker logs orionos` for scan errors
 
 **ntfy notifications not received**
 - Check `/api/health` to see ntfy status
 - Verify ntfy topic subscription on your phone
-- Check `docker logs agentdock` for ntfy errors
+- Check `docker logs orionos` for ntfy errors
 
 **High CPU on host**
 - Increase scanner interval (rebuild with custom code)

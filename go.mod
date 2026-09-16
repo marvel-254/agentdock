@@ -1,3 +1,3 @@
-module github.com/marvel-254/agentdock
+module github.com/marvel-254/orionos
 
 go 1.22

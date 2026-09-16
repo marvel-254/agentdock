@@ -1,17 +1,17 @@
 #!/bin/bash
-# AgentDock Install Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/marvel-254/agentdock/main/install.sh | sh
+# OrionOS Install Script
+# Usage: curl -fsSL https://raw.githubusercontent.com/marvel-254/orionos/main/install.sh | sh
 
 set -e
 
-REPO="marvel-254/agentdock"
+REPO="marvel-254/orionos"
 IMAGE="ghcr.io/${REPO}:latest"
-CONTAINER_NAME="agentdock"
-PORT="${AGENTDOCK_PORT:-8080}"
+CONTAINER_NAME="orionos"
+PORT="${ORIONOS_PORT:-8080}"
 
 echo ""
 echo "╔═══════════════════════════════════════════╗"
-echo "║  AgentDock — Lightweight AI Agent Monitor ║"
+echo "║  OrionOS — Lightweight AI Agent Monitor   ║"
 echo "╚═══════════════════════════════════════════╝"
 echo ""
 
@@ -26,14 +26,14 @@ if command -v docker compose &>/dev/null || docker compose version &>/dev/null 2
   USE_COMPOSE=true
 fi
 
-echo "📦 Pulling AgentDock image..."
+echo "📦 Pulling OrionOS image..."
 docker pull "${IMAGE}" 2>&1 || {
   echo "⚠️  Could not pull from GHCR. Building locally..."
   
   if command -v git &>/dev/null; then
     TMPDIR=$(mktemp -d)
-    git clone --depth 1 "https://github.com/${REPO}.git" "${TMPDIR}/agentdock"
-    cd "${TMPDIR}/agentdock"
+    git clone --depth 1 "https://github.com/${REPO}.git" "${TMPDIR}/orionos"
+    cd "${TMPDIR}/orionos"
     docker build -t "${IMAGE}" .
     cd -
     rm -rf "${TMPDIR}"
@@ -49,7 +49,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
   docker rm "${CONTAINER_NAME}" 2>/dev/null || true
 fi
 
-echo "🚀 Starting AgentDock..."
+echo "🚀 Starting OrionOS..."
 
 if [ "$USE_COMPOSE" = true ] && [ -f "docker-compose.yml" ]; then
   docker compose up -d
@@ -58,7 +58,7 @@ else
     --name "${CONTAINER_NAME}" \
     --restart unless-stopped \
     -p "${PORT}:8080" \
-    -v agentdock-data:/data \
+    -v orionos-data:/data \
     -v /proc:/host/proc:ro \
     -e HOST_PROC=/host/proc \
     -e TZ="$(cat /etc/timezone 2>/dev/null || echo 'UTC')" \
@@ -67,7 +67,7 @@ else
 fi
 
 echo ""
-echo "✅ AgentDock is running!"
+echo "✅ OrionOS is running!"
 echo ""
 echo "   Dashboard:  http://localhost:${PORT}"
 echo "   Health:     http://localhost:${PORT}/api/health"

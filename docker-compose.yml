@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  agentdock:
-    image: ghcr.io/marvel-254/agentdock:latest
-    container_name: agentdock
+  orionos:
+    image: ghcr.io/marvel-254/orionos:latest
+    container_name: orionos
     restart: unless-stopped
     ports:
-      - "${AGENTDOCK_PORT:-8080}:8080"
+      - "${ORIONOS_PORT:-8080}:8080"
     volumes:
-      - agentdock-data:/data
+      - orionos-data:/data
       - /proc:/host/proc:ro
     environment:
       - TZ=${TZ:-UTC}
       - HOST_PROC=/host/proc
       - NTFY_ENABLED=${NTFY_ENABLED:-0}
       - NTFY_URL=${NTFY_URL:-https://ntfy.sh}
-      - NTFY_TOPIC=${NTFY_TOPIC:-agentdock-alerts}
+      - NTFY_TOPIC=${NTFY_TOPIC:-orionos-alerts}
       - NTFY_TOKEN=${NTFY_TOKEN:-}
       - NTFY_PRIORITY_DONE=${NTFY_PRIORITY_DONE:-default}
       - NTFY_PRIORITY_BLOCKED=${NTFY_PRIORITY_BLOCKED:-high}
@@ -27,4 +27,4 @@ services:
       retries: 3
 
 volumes:
-  agentdock-data:
+  orionos-data:

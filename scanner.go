@@ -109,7 +109,7 @@ func scanProcesses() error {
 		if changed {
 			if oldState == "" {
 				store.addEvent("agent_started", fmt.Sprintf("%s started (PID %d)", displayName, pid), displayName)
-				sendNtfy("AgentDock", fmt.Sprintf("🟢 %s started", displayName), "low", "rocket,agent")
+				sendNtfy("OrionOS", fmt.Sprintf("🟢 %s started", displayName), "low", "rocket,agent")
 			} else {
 				trackAgentStateChange(agentID, displayName, oldState, newState)
 			}
@@ -121,7 +121,7 @@ func scanProcesses() error {
 	removed := store.removeStale(threshold)
 	for _, name := range removed {
 		store.addEvent("agent_stopped", fmt.Sprintf("%s stopped", name), name)
-		sendNtfy("AgentDock", fmt.Sprintf("🔴 %s stopped", name), "high", "stop_sign,agent")
+		sendNtfy("OrionOS", fmt.Sprintf("🔴 %s stopped", name), "high", "stop_sign,agent")
 	}
 
 	return nil

@@ -24,7 +24,7 @@ func initNtfy() {
 	ntfy = ntfyConfig{
 		Enabled:         os.Getenv("NTFY_ENABLED") == "1" || os.Getenv("NTFY_ENABLED") == "true",
 		BaseURL:         getEnv("NTFY_URL", "https://ntfy.sh"),
-		Topic:           getEnv("NTFY_TOPIC", "agentdock-alerts"),
+		Topic:           getEnv("NTFY_TOPIC", "orionos-alerts"),
 		Token:           os.Getenv("NTFY_TOKEN"),
 		PriorityDone:    getEnv("NTFY_PRIORITY_DONE", "default"),
 		PriorityBlocked: getEnv("NTFY_PRIORITY_BLOCKED", "high"),
@@ -104,7 +104,7 @@ func trackAgentStateChange(agentID, name, oldStatus, newStatus string) {
 		tags = "gear,agent"
 	}
 
-	sendNtfy("AgentDock", msg, priority, tags)
+	sendNtfy("OrionOS", msg, priority, tags)
 	store.addEvent("state_change", fmt.Sprintf("%s: %s → %s", name, oldStatus, newStatus), name)
 }
 
@@ -120,7 +120,7 @@ func heartbeat() {
 		agents := store.getAgents()
 		if len(agents) > 0 {
 			sendNtfy(
-				"AgentDock Summary",
+				"OrionOS Summary",
 				fmt.Sprintf("%d agents currently working", len(agents)),
 				"low",
 				"chart,agent",
